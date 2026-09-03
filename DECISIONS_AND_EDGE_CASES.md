@@ -149,6 +149,14 @@ Residential societies and apartment HOAs require verified government identity pr
   2. **Single Clean Master Action**: Removed all intermediate buttons and replaced them with a single bottom `🚀 Confirm & Submit Check-In Details` button for final gate clearance validation.
   3. **Multi-Device Settings Sync**: Settings saved via `⚙️ Settings` modal update the server SQLite database in real time so any admin opening the dashboard from any phone, laptop, or browser sees the exact same updated configuration.
 
+### ADR-019: Persistent Settings Rehydration & Cloud Sleep Recovery
+* **Context**: On Render's free tier, the container sleeps during periods of inactivity (15 min). On wake-up, the ephemeral filesystem was resetting settings to default templates.
+* **Decision**:
+  1. **Persistent Browser Cache**: Settings are now cached in `localStorage` (`pp_admin_settings`) upon save.
+  2. **Instant Pre-Fill**: Opening the settings modal reads `localStorage` instantly, guaranteeing that inputs are never empty or lost.
+  3. **Auto-Rehydration**: On wake-up, the client automatically re-hydrates the server settings if a container reboot occurred.
+  4. **Environment Fallback Priority**: Default settings in `database.js` now prioritize all `process.env` configuration keys.
+
 ---
 
 ## 3. Edge Case Registry & Handling
