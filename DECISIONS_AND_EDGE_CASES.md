@@ -157,6 +157,15 @@ Residential societies and apartment HOAs require verified government identity pr
   3. **Auto-Rehydration**: On wake-up, the client automatically re-hydrates the server settings if a container reboot occurred.
   4. **Environment Fallback Priority**: Default settings in `database.js` now prioritize all `process.env` configuration keys.
 
+### ADR-020: Streamlined Guest Portal Redesign & Friction Elimination
+* **Context**: User feedback identified unnecessary UI friction: repetitive lead guest names across 4 different sections, useless document type dropdowns, and a confusing all-or-nothing bottom submit button.
+* **Decision**:
+  1. **Eliminated Repetitive Names**: Replaced 4 redundant name headers with a sleek 3-stat summary strip (Flat #, Check-in Date, Guest Count).
+  2. **Removed Document Type Dropdown**: Removed Aadhaar/Passport/DL selectors; backend automatically defaults to standard Government ID proof.
+  3. **Self-Contained Individual Guest Cards**: Each guest card has its own Name field, 1-tap `📷 Upload / Snap Govt ID` button, and direct `Save Details` action with instant `✓ Complete` visual feedback.
+  4. **Dedicated Vehicle Card**: Clean optional vehicle plate registration with immediate independent save.
+  5. **Real-time Non-blocking Progress**: Replaced confusing bottom barrier with live registration progress bar.
+
 ---
 
 ## 3. Edge Case Registry & Handling
