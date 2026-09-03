@@ -126,6 +126,13 @@ Residential societies and apartment HOAs require verified government identity pr
   2. Executed automated file-by-file audit confirming 0 leaked credentials in tracked code.
   3. Git tracking isolated strictly to clean application logic, public assets, templates, and placeholder `.env.example`.
 
+### ADR-016: Private Repository Security & Multi-Deployment Architecture
+* **Context**: Ensuring source code and property business logic remain completely private and non-public, and clarifying Render multi-repo capabilities.
+* **Decision**:
+  1. **Private GitHub Repository**: The repository must be created as `Private`. Render integrates natively with private repositories at zero cost.
+  2. **Multi-Service Architecture**: Render accounts support unlimited repositories and multiple simultaneous web services.
+  3. **Google Auth + GitHub Integration**: Hosts can log in to Render via Google and link their private GitHub profile with scoped read permissions.
+
 ---
 
 ## 3. Edge Case Registry & Handling
