@@ -140,6 +140,15 @@ Residential societies and apartment HOAs require verified government identity pr
   2. Verified live HTTPS 200 response with automated Cloudflare/Render SSL.
   3. Live verified Host Admin Lock Screen, PIN authentication (`7788`), and guest portal routes on the live production URL.
 
+### ADR-018: Frictionless Auto-Save Guest Flow & Cloud Settings Persistence
+* **Context**:
+  1. Guest Portal had redundant save buttons (per-card button + master button + vehicle button).
+  2. Production settings on Render needed persistent synchronization across all host devices.
+* **Decision**:
+  1. **Unified Auto-Save**: All inputs (Primary Contact, Legal Names, Document Types, ID Photo Uploads, Vehicle Plate) now auto-save immediately on change/blur.
+  2. **Single Clean Master Action**: Removed all intermediate buttons and replaced them with a single bottom `🚀 Confirm & Submit Check-In Details` button for final gate clearance validation.
+  3. **Multi-Device Settings Sync**: Settings saved via `⚙️ Settings` modal update the server SQLite database in real time so any admin opening the dashboard from any phone, laptop, or browser sees the exact same updated configuration.
+
 ---
 
 ## 3. Edge Case Registry & Handling
