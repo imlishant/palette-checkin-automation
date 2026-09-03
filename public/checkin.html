@@ -3,154 +3,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Palette & Pillows - Guest Check-in & ID Verification</title>
-  <link rel="stylesheet" href="/css/guest.css?v=3.0">
+  <title>Palette & Pillows - Guest Check-in & Security Clearance</title>
+  <link rel="stylesheet" href="/css/guest.css?v=4.0">
 </head>
 <body>
 
   <div class="guest-wrapper">
     
-    <!-- Header -->
+    <!-- Clean Header (No repetitive names) -->
     <header class="portal-header">
       <div class="brand-badge">
         <span>🏨</span>
-        <span>Palette & Pillows Stays</span>
+        <span id="portal-host-name">Palette & Pillows Stays</span>
       </div>
-      <h1 id="header-greeting">Guest Check-In & Gate Verification</h1>
-      <p id="header-sub">Required by Society Security for Building Entry Approval</p>
+      <h1>Guest Check-In & Gate Pass</h1>
+      <p id="portal-sub-text">Society security verification for building entry clearance</p>
     </header>
 
     <!-- Loading State -->
-    <div id="loading-state" style="text-align:center; padding:50px 20px; color:var(--text-sub);">
-      <div style="font-size:32px; margin-bottom:10px;">⏳</div>
-      <div>Loading your reservation details...</div>
+    <div id="loading-state" class="state-container">
+      <div class="spinner">⏳</div>
+      <div>Loading reservation details...</div>
     </div>
 
     <!-- Error State -->
-    <div id="error-state" style="display:none; text-align:center; padding:40px 20px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius-md);">
+    <div id="error-state" class="state-container error-box" style="display:none;">
       <div style="font-size:36px; margin-bottom:10px;">⚠️</div>
-      <h2 style="font-size:18px; color:#fca5a5; margin-bottom:6px;">Link Not Found or Expired</h2>
-      <p style="font-size:13px; color:var(--text-sub);" id="error-message">Please check your check-in link or contact your host.</p>
+      <h2>Invalid or Expired Link</h2>
+      <p id="error-message">Please check your reservation check-in link or contact your host.</p>
     </div>
 
-    <!-- Portal Content (Shown once loaded) -->
+    <!-- Main Portal Content -->
     <main id="portal-content" style="display:none;">
 
-      <!-- Completed Celebration Banner (if 100% complete) -->
+      <!-- Completed Celebration Banner -->
       <div class="complete-screen" id="complete-banner" style="display:none;">
         <div class="complete-icon">🎉</div>
-        <h2>All Guest Details & IDs Verified!</h2>
-        <p style="font-size:14px; color:var(--text-sub);">
-          Your entry details are registered with the building security desk. You are all set for a smooth check-in!
-        </p>
+        <h2>All Guests Registered & Cleared!</h2>
+        <p>Your entry details are registered with the society security desk. Have a wonderful stay!</p>
       </div>
 
-      <!-- Stay Summary Card -->
-      <div class="stay-summary-card">
-        <div class="stay-meta-grid">
-          <div class="meta-item">
-            <div class="meta-label">Flat / Apartment</div>
-            <div class="meta-value highlight" id="summary-unit">Flat ---</div>
-          </div>
-          <div class="meta-item">
-            <div class="meta-label">Primary Guest</div>
-            <div class="meta-value" id="summary-guest-name">---</div>
-          </div>
-          <div class="meta-item">
-            <div class="meta-label">Check-in Date</div>
-            <div class="meta-value" id="summary-checkin">---</div>
-          </div>
-          <div class="meta-item">
-            <div class="meta-label">Guests Count</div>
-            <div class="meta-value" id="summary-guests-count">--- Adults</div>
-          </div>
+      <!-- Clean Summary Strip (Flat, Date, Guest Count) -->
+      <div class="summary-strip">
+        <div class="summary-col">
+          <span class="lbl">Apartment</span>
+          <span class="val highlight" id="summary-unit">Flat ---</span>
+        </div>
+        <div class="summary-col">
+          <span class="lbl">Check-in Date</span>
+          <span class="val" id="summary-checkin">---</span>
+        </div>
+        <div class="summary-col">
+          <span class="lbl">Guests Required</span>
+          <span class="val" id="summary-guests-count">---</span>
         </div>
       </div>
 
-      <!-- Primary Guest Details Confirmation (Auto-saves on change) -->
-      <div class="stay-summary-card" style="margin-bottom:20px;">
-        <div style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span>👤</span>
-            <span>Primary Guest Information</span>
-          </div>
-          <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">Auto-saved</span>
-        </div>
-        <div class="form-inputs-row">
-          <div>
-            <label style="font-size:11px; color:var(--text-muted); font-weight:600;">Primary Guest Legal Name *</label>
-            <input type="text" class="guest-input" id="input-primary-name" placeholder="Primary Guest Full Name *" minlength="3" required style="width:100%; margin-top:4px;">
-          </div>
-          <div>
-            <label style="font-size:11px; color:var(--text-muted); font-weight:600;">Contact Phone Number</label>
-            <input type="tel" class="guest-input" id="input-primary-phone" placeholder="Phone Number" style="width:100%; margin-top:4px;">
-          </div>
-        </div>
-      </div>
-
-      <!-- Live ID Progress Tracker -->
+      <!-- Live ID Compliance Tracker -->
       <div class="progress-card">
         <div class="progress-header">
-          <span class="title">Government ID Compliance</span>
-          <span class="count-pill" id="progress-pill">0 of 0 Verified</span>
+          <span class="title">Registration Compliance</span>
+          <span class="count-pill" id="progress-pill">0 of 0 Completed</span>
         </div>
         <div class="progress-bar-track">
           <div class="progress-bar-indicator" id="progress-bar-fill" style="width: 0%;"></div>
         </div>
         <div class="progress-hint" id="progress-hint-text">
-          Society regulations require legal name and government ID proof for every adult guest prior to gate entry.
+          Society gate rules require verified government ID proof for each adult guest before arrival.
         </div>
       </div>
 
-      <!-- Per-Adult Upload Slots List -->
-      <div class="section-heading">
+      <!-- Individual Adult Guest Cards -->
+      <div class="section-title">
         <span>👥</span>
-        <span>Registered Adult Guest(s) & ID Verification</span>
+        <span>Adult Guest Verification</span>
       </div>
 
-      <div class="adult-slots-list" id="adult-slots-container">
-        <!-- Rendered dynamically with auto-saving controls -->
+      <div class="guest-cards-list" id="adult-slots-container">
+        <!-- Rendered dynamically -->
       </div>
 
-      <!-- Vehicle & Arrival Details (Auto-saves on change) -->
-      <div class="details-card" style="margin-bottom:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <h3 style="margin:0;">🚗 Vehicle & Arrival Details</h3>
-          <span style="font-size:11px; color:var(--text-muted);">Auto-saved</span>
+      <!-- Vehicle Details (Clean & Optional) -->
+      <div class="vehicle-card">
+        <div class="card-head">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">🚗</span>
+            <strong>Vehicle Parking Clearance (Optional)</strong>
+          </div>
+          <span class="status-badge" id="vehicle-status-badge">Optional</span>
         </div>
-        <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">
-          Enter vehicle plate number if arriving by car (or leave blank if taking a cab/taxi).
-        </p>
-        <input type="text" class="guest-input" id="input-vehicle" placeholder="e.g. GA-01-AB-1234 (or Leave Blank if Cab)" style="width:100%;">
-      </div>
-
-      <!-- Validation Error Box (Hidden by default) -->
-      <div id="guest-validation-alert" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); border-radius:var(--radius-md); padding:16px; margin-bottom:20px; color:#fca5a5; font-size:13px; line-height:1.5;">
-        <!-- Dynamic error message injected here -->
-      </div>
-
-      <!-- Single Master Submit & Verify Action -->
-      <div class="details-card" style="text-align:center; padding:20px;">
-        <button type="button" class="btn-upload-file" id="btn-submit-checkin" style="width:100%; padding:14px; font-size:16px; justify-content:center; background:linear-gradient(135deg, #4f46e5, #7c3aed);">
-          <span>🚀 Confirm & Submit Check-In Details</span>
-        </button>
-        <p style="font-size:12px; color:var(--text-sub); margin-top:8px;">
-          All changes are auto-saved in real time. Click above to verify full gate clearance readiness.
-        </p>
+        <p class="card-sub">If arriving by personal or rental car, enter the vehicle number for society parking gate entry.</p>
+        <div class="vehicle-form-row">
+          <input type="text" class="clean-input" id="input-vehicle" placeholder="e.g. GA-01-AB-1234 (Leave blank if Cab)">
+          <button type="button" class="btn-secondary" id="btn-save-vehicle">Save Vehicle</button>
+        </div>
       </div>
 
       <!-- Security / Privacy Notice -->
-      <div class="security-notice">
-        🔒 <strong>Data Privacy Guarantee:</strong> Uploaded ID proofs are stored securely and used strictly for building security registration and local law compliance. Documents are auto-purged following check-out.
+      <div class="security-footer">
+        🔒 <strong>Data Privacy Guarantee:</strong> Uploaded government IDs are shared strictly with residential society security for building entry verification and are auto-purged following check-out.
       </div>
 
     </main>
 
   </div>
 
-  <!-- Hidden File Input for Guest Uploads -->
+  <!-- Hidden File Input for Mobile ID Uploads -->
   <input type="file" id="guest-file-input" style="display:none;" accept="image/*,application/pdf">
 
-  <script src="/js/guest.js?v=3.0"></script>
+  <script src="/js/guest.js?v=4.0"></script>
 </body>
 </html>
