@@ -133,6 +133,13 @@ Residential societies and apartment HOAs require verified government identity pr
   2. **Multi-Service Architecture**: Render accounts support unlimited repositories and multiple simultaneous web services.
   3. **Google Auth + GitHub Integration**: Hosts can log in to Render via Google and link their private GitHub profile with scoped read permissions.
 
+### ADR-017: Live Production Subdomain Verification (checkin.paletteandpillows.space)
+* **Context**: Verifying DNS propagation, Render container routing, and SSL certificate issuance for the live production custom domain.
+* **Decision**:
+  1. Verified Namecheap CNAME resolution (`checkin` $\rightarrow$ `palette-checkin-automation.onrender.com`).
+  2. Verified live HTTPS 200 response with automated Cloudflare/Render SSL.
+  3. Live verified Host Admin Lock Screen, PIN authentication (`7788`), and guest portal routes on the live production URL.
+
 ---
 
 ## 3. Edge Case Registry & Handling

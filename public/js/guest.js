@@ -1,4 +1,4 @@
-// Guest Portal Client Logic - Per-Guest Independent Submission
+// Guest Portal Client Logic - Unified Auto-Save Workflow
 let currentToken = null;
 let currentBooking = null;
 let activeAdultSlotId = null;
@@ -47,7 +47,7 @@ function showGuestToast(msg, type = 'success') {
     alertBox.style.background = 'rgba(16, 185, 129, 0.15)';
     alertBox.style.borderColor = 'rgba(16, 185, 129, 0.4)';
     alertBox.style.color = '#6ee7b7';
-    alertBox.innerHTML = `<strong>✓ Success:</strong> ${msg}`;
+    alertBox.innerHTML = `<strong>✓ Auto-Saved:</strong> ${msg}`;
   } else {
     alertBox.style.background = 'rgba(239, 68, 68, 0.15)';
     alertBox.style.borderColor = 'rgba(239, 68, 68, 0.4)';
@@ -57,7 +57,7 @@ function showGuestToast(msg, type = 'success') {
   alertBox.style.display = 'block';
   setTimeout(() => {
     alertBox.style.display = 'none';
-  }, 6000);
+  }, 5000);
 }
 
 // Load Booking Details
@@ -113,7 +113,7 @@ function renderPortal(booking, meta) {
   }
 
   // Update Progress Meter
-  const uploaded = booking.uploaded_count; // strictly complete (both valid name >= 3 chars & photo)
+  const uploaded = booking.uploaded_count; // strictly complete (valid name >= 3 chars & attached photo)
   const total = booking.total_adults;
   const percentage = booking.completion_percentage;
 
@@ -139,7 +139,7 @@ function renderPortal(booking, meta) {
     completeBanner.style.display = 'none';
   }
 
-  // Render Per-Adult Slots with Independent Save Controls
+  // Render Per-Adult Slots (Clean, Auto-saving, Zero Button Clutter)
   const container = document.getElementById('adult-slots-container');
   container.innerHTML = booking.adults.map(adult => {
     const hasFile = (adult.status === 'UPLOADED' || adult.status === 'VERIFIED') && !!adult.id_file_path;
@@ -188,9 +188,10 @@ function renderPortal(booking, meta) {
                 value="${escapeHtml(initialName)}"
                 minlength="3"
                 oninput="validateNameInputLive('${adult.id}')"
+                onblur="autoSaveAdultSlot('${adult.id}')"
                 style="${!hasValidName ? 'border-color:rgba(245,158,11,0.5);' : 'border-color:rgba(16,185,129,0.5);'}">
               
-              <select class="guest-input" id="type-${adult.id}">
+              <select class="guest-input" id="type-${adult.id}" onchange="autoSaveAdultSlot('${adult.id}')">
                 <option value="Aadhaar" ${currentIdType === 'Aadhaar' ? 'selected' : ''}>Aadhaar</option>
                 <option value="Passport" ${currentIdType === 'Passport' ? 'selected' : ''}>Passport</option>
                 <option value="Driving License" ${currentIdType === 'Driving License' ? 'selected' : ''}>Driving License</option>
@@ -202,23 +203,19 @@ function renderPortal(booking, meta) {
 
           <div id="inline-error-${adult.id}" style="display:none; color:#f87171; font-size:12px; margin-bottom:8px; font-weight:600;"></div>
 
-          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <div>
             ${hasFile ? `
-              <div class="file-preview-pill" style="flex:1;">
-                <span style="text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:200px;">
-                  📄 Attached: <strong>${escapeHtml(adult.id_file_name || 'ID Document')}</strong>
+              <div class="file-preview-pill">
+                <span style="text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:260px;">
+                  📄 Attached: <strong>${escapeHtml(adult.id_file_name || 'ID Document')}</strong> (${escapeHtml(currentIdType)})
                 </span>
-                <button type="button" class="btn-upload-file" style="padding:5px 10px; font-size:11px; width:auto; background:rgba(255,255,255,0.12); box-shadow:none;" onclick="triggerGuestUpload('${adult.id}')">Replace</button>
+                <button type="button" class="btn-upload-file" style="padding:6px 12px; font-size:12px; width:auto; background:rgba(255,255,255,0.12); box-shadow:none;" onclick="triggerGuestUpload('${adult.id}')">Replace Photo</button>
               </div>
             ` : `
-              <button type="button" class="btn-upload-file" style="flex:1;" onclick="triggerGuestUpload('${adult.id}')">
-                <span>📸 Snap / Upload ID Proof</span>
+              <button type="button" class="btn-upload-file" onclick="triggerGuestUpload('${adult.id}')">
+                <span>📸 Snap / Upload ID Document</span>
               </button>
             `}
-
-            <button type="button" class="btn-upload-file" id="btn-save-slot-${adult.id}" style="width:auto; padding:8px 16px; font-size:13px; background:${isComplete ? '#059669' : 'var(--accent-primary)'};" onclick="saveIndividualAdultSlot('${adult.id}')">
-              <span>💾 Save Adult ${adult.adult_index}</span>
-            </button>
           </div>
 
         </div>
@@ -248,7 +245,7 @@ function triggerGuestUpload(adultId) {
   fileInput.click();
 }
 
-// Handle File Selected & Upload for specific slot
+// Handle File Selected & Upload for specific slot (Auto-saves immediately)
 document.getElementById('guest-file-input').addEventListener('change', async (e) => {
   if (!e.target.files.length || !activeAdultSlotId || !currentToken) return;
 
@@ -277,11 +274,7 @@ document.getElementById('guest-file-input').addEventListener('change', async (e)
     if (data.success) {
       currentBooking = data.booking;
       renderPortal(data.booking);
-      if (isValidName(fullName)) {
-        showGuestToast(`Adult slot updated with ID document and legal name!`, 'success');
-      } else {
-        showGuestToast(`ID photo uploaded! Please enter the legal name (letters only, min 3 chars) to complete verification.`, 'warning');
-      }
+      showGuestToast('ID photo uploaded & saved successfully!', 'success');
     } else {
       if (inlineError) {
         inlineError.textContent = data.error || 'Upload failed.';
@@ -298,8 +291,8 @@ document.getElementById('guest-file-input').addEventListener('change', async (e)
   }
 });
 
-// Save Individual Adult Slot (e.g. Guest 3 fills their details)
-async function saveIndividualAdultSlot(adultId) {
+// Auto-save Individual Adult Slot on blur/change
+async function autoSaveAdultSlot(adultId) {
   if (!currentToken || !currentBooking) return;
 
   const nameInput = document.getElementById(`name-${adultId}`);
@@ -312,38 +305,17 @@ async function saveIndividualAdultSlot(adultId) {
   const fullName = nameInput ? nameInput.value.trim() : '';
   const idType = typeSelect ? typeSelect.value : 'Aadhaar';
 
-  const matchingAdult = currentBooking.adults.find(a => a.id === adultId);
-  const hasFile = matchingAdult && (matchingAdult.status === 'UPLOADED' || matchingAdult.status === 'VERIFIED') && !!matchingAdult.id_file_path;
-
-  // Validate Name Format (Strict Regex: Letters, min 3 chars)
-  if (!fullName) {
-    if (inlineError) {
-      inlineError.textContent = '⚠️ Full legal name is mandatory.';
-      inlineError.style.display = 'block';
-    }
-    if (card) card.style.border = '2px solid #ef4444';
-    return;
-  }
+  if (!fullName) return; // let them continue typing
 
   if (!isValidName(fullName)) {
     if (inlineError) {
-      inlineError.textContent = '⚠️ Name must contain letters only (min 3 characters, no numbers or special symbols).';
+      inlineError.textContent = '⚠️ Name must contain letters only (min 3 characters).';
       inlineError.style.display = 'block';
     }
-    if (card) card.style.border = '2px solid #ef4444';
     return;
   }
 
-  // Check ID photo
-  if (!hasFile) {
-    if (inlineError) {
-      inlineError.textContent = '📸 ID document photo is required for this slot. Please click "Snap / Upload ID Proof".';
-      inlineError.style.display = 'block';
-    }
-    if (card) card.style.border = '2px solid #f59e0b';
-  }
-
-  // Save to backend
+  // Save to backend silently
   try {
     const res = await fetch(`/api/guest/portal/${currentToken}/adults/${adultId}/save`, {
       method: 'POST',
@@ -353,64 +325,33 @@ async function saveIndividualAdultSlot(adultId) {
     const data = await res.json();
     if (data.success) {
       currentBooking = data.booking;
-      renderPortal(data.booking);
-      if (hasFile) {
-        showGuestToast(`Adult slot verified successfully!`, 'success');
-      } else {
-        showGuestToast(`Name saved! Please attach the ID document photo to complete gate verification.`, 'warning');
+      // Update badge and card status without wiping other inputs
+      const matchingAdult = data.booking.adults.find(a => a.id === adultId);
+      if (matchingAdult && matchingAdult.is_slot_complete) {
+        if (card) card.style.border = '1px solid rgba(16,185,129,0.5)';
+        const badge = document.getElementById(`badge-adult-${adultId}`);
+        if (badge) {
+          badge.className = 'slot-status-badge uploaded';
+          badge.textContent = '✓ Verified (Name & ID)';
+        }
       }
-    } else {
-      if (inlineError) {
-        inlineError.textContent = data.error || 'Failed to save details.';
-        inlineError.style.display = 'block';
-      }
+      showGuestToast(`Name for Adult ${matchingAdult.adult_index} auto-saved!`, 'success');
     }
-  } catch (err) {
-    if (inlineError) {
-      inlineError.textContent = 'Network error: ' + err.message;
-      inlineError.style.display = 'block';
-    }
+  } catch (e) {
+    console.warn('Auto-save error', e);
   }
 }
 
-// Master "Save & Verify All Guest Details" Button
-document.getElementById('btn-save-all-details').addEventListener('click', async () => {
-  if (!currentBooking || !currentToken) return;
-
+// Auto-save Primary Guest info
+async function autoSavePrimaryDetails() {
+  if (!currentToken) return;
   const primaryNameInput = document.getElementById('input-primary-name');
   const primaryPhoneInput = document.getElementById('input-primary-phone');
   const primaryName = primaryNameInput ? primaryNameInput.value.trim() : '';
   const primaryPhone = primaryPhoneInput ? primaryPhoneInput.value.trim() : '';
 
-  const errors = [];
-
-  // 1. Validate Primary Guest Name
-  if (!primaryName) {
-    errors.push('• <strong>Primary Guest Name</strong> is mandatory.');
-  } else if (!isValidName(primaryName)) {
-    errors.push('• <strong>Primary Guest Name</strong> must contain letters only (min 3 characters).');
-  }
-
-  // 2. Validate All Adult Slots
-  for (const adult of currentBooking.adults) {
-    const nameInput = document.getElementById(`name-${adult.id}`);
-    const nameVal = nameInput ? nameInput.value.trim() : (adult.full_name || '');
-    const hasFile = (adult.status === 'UPLOADED' || adult.status === 'VERIFIED') && !!adult.id_file_path;
-
-    if (!nameVal) {
-      errors.push(`• <strong>Adult ${adult.adult_index}</strong>: Legal name is missing.`);
-    } else if (!isValidName(nameVal)) {
-      errors.push(`• <strong>Adult ${adult.adult_index}</strong>: Name "${escapeHtml(nameVal)}" is invalid (letters only, min 3 characters).`);
-    }
-
-    if (!hasFile) {
-      errors.push(`• <strong>Adult ${adult.adult_index}</strong>: ID document photo is not uploaded.`);
-    }
-  }
-
-  // Save Primary Contact info
-  try {
-    if (isValidName(primaryName)) {
+  if (primaryName && isValidName(primaryName)) {
+    try {
       await fetch(`/api/guest/portal/${currentToken}/details`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -419,29 +360,66 @@ document.getElementById('btn-save-all-details').addEventListener('click', async 
           guest_phone: primaryPhone
         })
       });
+      showGuestToast('Primary contact details saved!', 'success');
+    } catch (e) {
+      console.warn('Auto-save error', e);
     }
+  }
+}
+
+// Auto-save Vehicle Number
+async function autoSaveVehicle() {
+  if (!currentToken) return;
+  const vehicle = document.getElementById('input-vehicle').value.trim();
+  try {
+    await fetch(`/api/guest/portal/${currentToken}/details`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vehicle_number: vehicle })
+    });
+    showGuestToast('Vehicle registration details saved!', 'success');
   } catch (e) {
-    console.warn('Error saving primary details', e);
+    console.warn('Auto-save vehicle error', e);
+  }
+}
+
+// Attach auto-save event listeners
+document.getElementById('input-primary-name').addEventListener('blur', autoSavePrimaryDetails);
+document.getElementById('input-primary-phone').addEventListener('blur', autoSavePrimaryDetails);
+document.getElementById('input-vehicle').addEventListener('blur', autoSaveVehicle);
+
+// Single Master Submit & Verify Action
+document.getElementById('btn-submit-checkin').addEventListener('click', async () => {
+  if (!currentBooking || !currentToken) return;
+
+  const primaryNameInput = document.getElementById('input-primary-name');
+  const primaryName = primaryNameInput ? primaryNameInput.value.trim() : '';
+
+  const errors = [];
+
+  if (!primaryName || !isValidName(primaryName)) {
+    errors.push('• <strong>Primary Guest Legal Name</strong> is required (letters only, min 3 characters).');
   }
 
-  // Save all adult slot names
   for (const adult of currentBooking.adults) {
     const nameInput = document.getElementById(`name-${adult.id}`);
-    const typeSelect = document.getElementById(`type-${adult.id}`);
-    if (nameInput && typeSelect) {
-      const val = nameInput.value.trim();
-      const type = typeSelect.value;
-      if (val && isValidName(val)) {
-        await fetch(`/api/guest/portal/${currentToken}/adults/${adult.id}/save`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ full_name: val, id_type: type })
-        });
-      }
+    const nameVal = nameInput ? nameInput.value.trim() : (adult.full_name || '');
+    const hasFile = (adult.status === 'UPLOADED' || adult.status === 'VERIFIED') && !!adult.id_file_path;
+
+    if (!nameVal || !isValidName(nameVal)) {
+      errors.push(`• <strong>Adult ${adult.adult_index}</strong>: Valid legal name is required.`);
+      const card = document.getElementById(`card-adult-${adult.id}`);
+      if (card) card.style.border = '2px solid #ef4444';
+    }
+
+    if (!hasFile) {
+      errors.push(`• <strong>Adult ${adult.adult_index}</strong>: ID document photo is not uploaded.`);
+      const card = document.getElementById(`card-adult-${adult.id}`);
+      if (card) card.style.border = '2px solid #ef4444';
     }
   }
 
-  // Refresh booking state
+  // Refresh latest state from server
   const refreshRes = await fetch(`/api/guest/portal/${currentToken}`);
   const refreshData = await refreshRes.json();
   if (refreshData.success) {
@@ -466,30 +444,7 @@ document.getElementById('btn-save-all-details').addEventListener('click', async 
     alertBox.style.color = '#6ee7b7';
     alertBox.innerHTML = `<strong>🎉 All ${currentBooking.total_adults} adult guest names and ID proofs are verified and ready for society building entry!</strong>`;
     alertBox.style.display = 'block';
-  }
-});
-
-// Vehicle Details Submit
-document.getElementById('form-additional-details').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!currentToken) return;
-
-  const vehicleNumber = document.getElementById('input-vehicle').value;
-
-  try {
-    const res = await fetch(`/api/guest/portal/${currentToken}/details`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vehicle_number: vehicleNumber })
-    });
-    const data = await res.json();
-    if (data.success) {
-      showGuestToast('Vehicle registration details saved for building security entry!', 'success');
-      currentBooking = data.booking;
-      renderPortal(data.booking);
-    }
-  } catch (err) {
-    showGuestToast('Error saving details: ' + err.message, 'danger');
+    document.getElementById('complete-banner').style.display = 'block';
   }
 });
 

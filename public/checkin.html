@@ -39,7 +39,7 @@
       <!-- Completed Celebration Banner (if 100% complete) -->
       <div class="complete-screen" id="complete-banner" style="display:none;">
         <div class="complete-icon">🎉</div>
-        <h2>All Guest IDs Received!</h2>
+        <h2>All Guest Details & IDs Verified!</h2>
         <p style="font-size:14px; color:var(--text-sub);">
           Your entry details are registered with the building security desk. You are all set for a smooth check-in!
         </p>
@@ -57,7 +57,7 @@
             <div class="meta-value" id="summary-guest-name">---</div>
           </div>
           <div class="meta-item">
-            <div class="meta-label">Check-in Time</div>
+            <div class="meta-label">Check-in Date</div>
             <div class="meta-value" id="summary-checkin">---</div>
           </div>
           <div class="meta-item">
@@ -67,15 +67,18 @@
         </div>
       </div>
 
-      <!-- Primary Guest Details Confirmation -->
+      <!-- Primary Guest Details Confirmation (Auto-saves on change) -->
       <div class="stay-summary-card" style="margin-bottom:20px;">
-        <div style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-          <span>👤</span>
-          <span>Primary Guest Contact Information</span>
+        <div style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span>👤</span>
+            <span>Primary Guest Information</span>
+          </div>
+          <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">Auto-saved</span>
         </div>
-        <div class="form-inputs-row" style="margin-bottom:10px;">
+        <div class="form-inputs-row">
           <div>
-            <label style="font-size:11px; color:var(--text-muted); font-weight:600;">Primary Guest Full Name *</label>
+            <label style="font-size:11px; color:var(--text-muted); font-weight:600;">Primary Guest Legal Name *</label>
             <input type="text" class="guest-input" id="input-primary-name" placeholder="Primary Guest Full Name *" minlength="3" required style="width:100%; margin-top:4px;">
           </div>
           <div>
@@ -89,24 +92,36 @@
       <div class="progress-card">
         <div class="progress-header">
           <span class="title">Government ID Compliance</span>
-          <span class="count-pill" id="progress-pill">0 of 0 Completed</span>
+          <span class="count-pill" id="progress-pill">0 of 0 Verified</span>
         </div>
         <div class="progress-bar-track">
           <div class="progress-bar-indicator" id="progress-bar-fill" style="width: 0%;"></div>
         </div>
         <div class="progress-hint" id="progress-hint-text">
-          Society regulations require both the legal name and government ID proof for every adult guest prior to gate entry.
+          Society regulations require legal name and government ID proof for every adult guest prior to gate entry.
         </div>
       </div>
 
       <!-- Per-Adult Upload Slots List -->
       <div class="section-heading">
         <span>👥</span>
-        <span>Adult Guest Names & ID Documents</span>
+        <span>Registered Adult Guest(s) & ID Verification</span>
       </div>
 
       <div class="adult-slots-list" id="adult-slots-container">
-        <!-- Rendered dynamically -->
+        <!-- Rendered dynamically with auto-saving controls -->
+      </div>
+
+      <!-- Vehicle & Arrival Details (Auto-saves on change) -->
+      <div class="details-card" style="margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <h3 style="margin:0;">🚗 Vehicle & Arrival Details</h3>
+          <span style="font-size:11px; color:var(--text-muted);">Auto-saved</span>
+        </div>
+        <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">
+          Enter vehicle plate number if arriving by car (or leave blank if taking a cab/taxi).
+        </p>
+        <input type="text" class="guest-input" id="input-vehicle" placeholder="e.g. GA-01-AB-1234 (or Leave Blank if Cab)" style="width:100%;">
       </div>
 
       <!-- Validation Error Box (Hidden by default) -->
@@ -114,28 +129,14 @@
         <!-- Dynamic error message injected here -->
       </div>
 
-      <!-- Save & Submit Action Card -->
-      <div class="details-card" style="text-align:center; padding:24px 20px;">
-        <button type="button" class="btn-upload-file" id="btn-save-all-details" style="width:100%; padding:14px; font-size:16px; justify-content:center;">
-          <span>💾 Save & Verify All Guest Details</span>
+      <!-- Single Master Submit & Verify Action -->
+      <div class="details-card" style="text-align:center; padding:20px;">
+        <button type="button" class="btn-upload-file" id="btn-submit-checkin" style="width:100%; padding:14px; font-size:16px; justify-content:center; background:linear-gradient(135deg, #4f46e5, #7c3aed);">
+          <span>🚀 Confirm & Submit Check-In Details</span>
         </button>
         <p style="font-size:12px; color:var(--text-sub); margin-top:8px;">
-          You can save details individually or submit all guests at once.
+          All changes are auto-saved in real time. Click above to verify full gate clearance readiness.
         </p>
-      </div>
-
-      <!-- Additional Details Form (Vehicle Number, etc.) -->
-      <div class="details-card">
-        <h3>🚗 Vehicle & Arrival Details</h3>
-        <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px;">
-          If arriving by personal or rental car, enter the vehicle number for security parking clearance.
-        </p>
-        <form id="form-additional-details">
-          <div style="display:flex; gap:10px; margin-bottom:12px;">
-            <input type="text" class="guest-input" id="input-vehicle" placeholder="e.g. KA-01-AB-1234 (or Leave Blank if Cab)" style="flex:1;">
-            <button type="submit" class="btn-upload-file" style="padding:8px 16px; font-size:13px; width:auto;">Save</button>
-          </div>
-        </form>
       </div>
 
       <!-- Security / Privacy Notice -->
