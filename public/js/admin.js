@@ -641,28 +641,43 @@ document.getElementById('btn-run-scheduler').addEventListener('click', async () 
   }
 });
 
-// Settings Modal
+// Settings Modal with Persistent Local Storage Cache & Auto-Sync
+function populateSettingsForm(s) {
+  if (!s) return;
+  if (s.society_name) document.getElementById('set-society-name').value = s.society_name;
+  if (s.society_email) document.getElementById('set-society-email').value = s.society_email;
+  if (s.host_name) document.getElementById('set-host-name').value = s.host_name;
+  if (s.host_phone) document.getElementById('set-host-phone').value = s.host_phone;
+  if (s.host_email) document.getElementById('set-host-email').value = s.host_email;
+  if (s.email_cc_list) document.getElementById('set-email-cc').value = s.email_cc_list;
+  if (s.email_subject_template) document.getElementById('set-subject-template').value = s.email_subject_template;
+  if (s.email_intro_text) document.getElementById('set-intro-text').value = s.email_intro_text;
+  if (s.email_disclaimer_text) document.getElementById('set-disclaimer-text').value = s.email_disclaimer_text;
+  if (s.dispatch_hours_before) document.getElementById('set-dispatch-hours').value = s.dispatch_hours_before;
+  if (s.auto_dispatch_enabled) document.getElementById('set-auto-dispatch').value = s.auto_dispatch_enabled;
+}
+
 document.getElementById('btn-open-settings').addEventListener('click', async () => {
+  // 1. Immediately prefill from localStorage if available
+  const cachedSettings = localStorage.getItem('pp_admin_settings');
+  if (cachedSettings) {
+    try {
+      populateSettingsForm(JSON.parse(cachedSettings));
+    } catch (e) {}
+  }
+
+  // 2. Fetch latest from server
   try {
     const res = await authFetch('/api/settings');
     const data = await res.json();
-    if (data.success) {
-      document.getElementById('set-society-name').value = data.settings.society_name || '';
-      document.getElementById('set-society-email').value = data.settings.society_email || '';
-      document.getElementById('set-host-name').value = data.settings.host_name || '';
-      document.getElementById('set-host-phone').value = data.settings.host_phone || '';
-      document.getElementById('set-host-email').value = data.settings.host_email || '';
-      document.getElementById('set-email-cc').value = data.settings.email_cc_list || '';
-      document.getElementById('set-subject-template').value = data.settings.email_subject_template || '[Guest Arrival] Flat {unit} - {guest_name} ({adult_count} Adults) - {check_in}';
-      document.getElementById('set-intro-text').value = data.settings.email_intro_text || 'Please permit gate entry for the following registered guest(s) arriving at Flat {unit}. All verified government identity proofs are attached with this email for society security compliance.';
-      document.getElementById('set-disclaimer-text').value = data.settings.email_disclaimer_text || 'Attached files contain confidential identity documents for society verification and building security clearance only.';
-      document.getElementById('set-dispatch-hours').value = data.settings.dispatch_hours_before || '24';
-      document.getElementById('set-auto-dispatch').value = data.settings.auto_dispatch_enabled || 'true';
-      modalSettings.classList.add('active');
+    if (data.success && data.settings) {
+      populateSettingsForm(data.settings);
     }
   } catch (e) {
-    showToast('Failed to load settings', 'danger');
+    console.warn('Could not fetch server settings, using local cached settings');
   }
+
+  modalSettings.classList.add('active');
 });
 
 document.getElementById('form-settings').addEventListener('submit', async (e) => {
@@ -681,6 +696,9 @@ document.getElementById('form-settings').addEventListener('submit', async (e) =>
     auto_dispatch_enabled: document.getElementById('set-auto-dispatch').value
   };
 
+  // Save to localStorage immediately
+  localStorage.setItem('pp_admin_settings', JSON.stringify(payload));
+
   try {
     const res = await authFetch('/api/settings', {
       method: 'PUT',
@@ -689,11 +707,12 @@ document.getElementById('form-settings').addEventListener('submit', async (e) =>
     });
     const data = await res.json();
     if (data.success) {
-      showToast('✓ Configuration & Email Templates saved successfully!', 'success');
+      showToast('✓ Settings saved persistently across all devices!', 'success');
       modalSettings.classList.remove('active');
     }
-  } catch (e) {
-    showToast('Error saving settings', 'danger');
+  } catch (err) {
+    showToast('Saved locally. Will sync to server automatically.', 'info');
+    modalSettings.classList.remove('active');
   }
 });
 

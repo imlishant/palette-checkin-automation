@@ -78,13 +78,13 @@ function initDatabase() {
   insertSetting.run('society_email', process.env.DEFAULT_SOCIETY_EMAIL || 'society.security@greenvalleyrwa.org');
   insertSetting.run('host_name', process.env.HOST_NAME || 'Palette & Pillows Hosting');
   insertSetting.run('host_phone', process.env.HOST_PHONE || '+91 98765 43210');
-  insertSetting.run('host_email', process.env.HOST_EMAIL || 'host@paletteandpillows.com');
-  insertSetting.run('email_cc_list', process.env.HOST_EMAIL || 'host@paletteandpillows.com');
-  insertSetting.run('email_subject_template', '[Guest Arrival] Flat {unit} - {guest_name} ({adult_count} Adults) - {check_in}');
-  insertSetting.run('email_intro_text', 'Please permit gate entry for the following registered guest(s) arriving at Flat {unit}. All verified government identity proofs are attached with this email for society security compliance.');
-  insertSetting.run('email_disclaimer_text', 'Attached files contain confidential identity documents for society verification and building security clearance only.');
-  insertSetting.run('auto_dispatch_enabled', 'true');
-  insertSetting.run('dispatch_hours_before', '24');
+  insertSetting.run('host_email', process.env.HOST_EMAIL || process.env.SMTP_USER || 'host@paletteandpillows.com');
+  insertSetting.run('email_cc_list', process.env.EMAIL_CC_LIST || process.env.HOST_EMAIL || process.env.SMTP_USER || 'host@paletteandpillows.com');
+  insertSetting.run('email_subject_template', process.env.EMAIL_SUBJECT_TEMPLATE || '[Guest Arrival] Flat {unit} - {guest_name} ({adult_count} Adults) - {check_in}');
+  insertSetting.run('email_intro_text', process.env.EMAIL_INTRO_TEXT || 'Please permit gate entry for the following registered guest(s) arriving at Flat {unit}. All verified government identity proofs are attached with this email for society security compliance.');
+  insertSetting.run('email_disclaimer_text', process.env.EMAIL_DISCLAIMER_TEXT || 'Attached files contain confidential identity documents for society verification and building security clearance only.');
+  insertSetting.run('auto_dispatch_enabled', process.env.AUTO_DISPATCH_ENABLED || 'true');
+  insertSetting.run('dispatch_hours_before', process.env.DISPATCH_HOURS_BEFORE || '24');
 
   console.log('[DB] Database tables and default settings initialized.');
 }
