@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Palette & Pillows - Guest Check-in & Society Email Automation</title>
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-wrapper">
+        <div class="brand-icon">🏨</div>
+        <div class="brand-text">
+          <h1>Palette & Pillows</h1>
+          <p>Guest Check-In & Society Entry Automation</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-outline" id="btn-run-scheduler" title="Scan and auto-dispatch ready bookings">
+          ⚡ Run Scheduler Now
+        </button>
+        <button class="btn btn-outline" id="btn-open-logs">
+          📋 Logs
+        </button>
+        <button class="btn btn-outline" id="btn-open-settings">
+          ⚙️ Settings
+        </button>
+        <button class="btn btn-primary" id="btn-new-booking">
+          + New Booking
+        </button>
+        <button class="btn btn-outline" id="btn-lock-dashboard" title="Lock Host Dashboard">
+          🔒 Lock
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Admin Auth Lock Screen Overlay -->
+  <div id="admin-lock-screen" style="position:fixed; inset:0; background:#0b0f19; z-index:999; display:none; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#151d30; border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:36px; max-width:400px; width:100%; text-align:center; box-shadow:var(--shadow-md);">
+      <div style="font-size:44px; margin-bottom:12px;">🔒</div>
+      <h2 style="font-family:var(--font-heading); font-size:22px; margin-bottom:6px; color:#ffffff;">Host Dashboard Locked</h2>
+      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:24px;">Enter your Host Admin PIN to access the reservation manifest and society controls.</p>
+      
+      <form id="form-admin-login">
+        <div class="form-group" style="margin-bottom:18px;">
+          <input type="password" id="input-admin-pin" class="form-input" placeholder="Enter Host PIN (Default: 7788)" style="text-align:center; font-size:18px; letter-spacing:4px; font-weight:700;" autofocus required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:12px; font-size:14px;">Unlock Dashboard</button>
+      </form>
+      <div id="login-error-msg" style="color:var(--danger); font-size:12px; margin-top:12px; display:none;">Incorrect PIN. Please try again.</div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main-container">
+
+    <!-- Metrics Row -->
+    <div class="stats-grid">
+      <div class="stat-card" id="card-filter-missing" style="cursor:pointer;">
+        <div class="stat-icon red">🚨</div>
+        <div class="stat-content">
+          <div class="stat-number" id="stat-missing-count">0</div>
+          <div class="stat-label">Missing Adult IDs</div>
+        </div>
+      </div>
+
+      <div class="stat-card" id="card-filter-ready" style="cursor:pointer;">
+        <div class="stat-icon yellow">🟡</div>
+        <div class="stat-content">
+          <div class="stat-number" id="stat-ready-count">0</div>
+          <div class="stat-label">Ready for Society Dispatch</div>
+        </div>
+      </div>
+
+      <div class="stat-card" id="card-filter-sent" style="cursor:pointer;">
+        <div class="stat-icon green">✅</div>
+        <div class="stat-content">
+          <div class="stat-number" id="stat-sent-count">0</div>
+          <div class="stat-label">Society Notified & Approved</div>
+        </div>
+      </div>
+
+      <div class="stat-card" id="card-filter-today" style="cursor:pointer;">
+        <div class="stat-icon blue">📅</div>
+        <div class="stat-content">
+          <div class="stat-number" id="stat-today-count">0</div>
+          <div class="stat-label">Today's Arrivals</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Header & Filter Tabs -->
+    <div class="section-header">
+      <div class="section-title">
+        <span>Guest Arrivals & ID Compliance Manifest</span>
+        <span class="badge info" id="active-filter-badge">All</span>
+      </div>
+
+      <div class="filter-tabs">
+        <button class="tab-btn active" data-filter="ALL">All Bookings</button>
+        <button class="tab-btn" data-filter="ATTENTION">🚨 Needs Attention</button>
+        <button class="tab-btn" data-filter="TODAY">📅 Today</button>
+        <button class="tab-btn" data-filter="TOMORROW">📅 Tomorrow</button>
+        <button class="tab-btn" data-filter="SENT">✅ Sent</button>
+      </div>
+    </div>
+
+    <!-- Bookings List Container -->
+    <div class="bookings-list" id="bookings-container">
+      <div style="text-align:center; padding: 40px; color: var(--text-muted);">
+        Loading guest bookings...
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal: New Booking -->
+  <div class="modal-overlay" id="modal-new-booking">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add Airbnb / Guest Booking</h2>
+        <button class="modal-close-btn" data-close>&times;</button>
+      </div>
+      <form id="form-new-booking">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Primary Guest Name *</label>
+            <input type="text" class="form-input" id="new-guest-name" placeholder="e.g. Rahul Sharma" required>
+          </div>
+          <div class="form-group">
+            <label>Flat / Unit Number *</label>
+            <input type="text" class="form-input" id="new-unit" placeholder="e.g. A-1204" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Guest Phone (with country code)</label>
+            <input type="tel" class="form-input" id="new-phone" placeholder="e.g. +91 98765 43210">
+          </div>
+          <div class="form-group">
+            <label>Guest Email</label>
+            <input type="email" class="form-input" id="new-email" placeholder="e.g. rahul@example.com">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Check-in Date *</label>
+            <input type="date" class="form-input" id="new-checkin" required>
+          </div>
+          <div class="form-group">
+            <label>Check-out Date *</label>
+            <input type="date" class="form-input" id="new-checkout" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Total Adults (IDs Required) *</label>
+            <input type="number" min="1" max="15" value="2" class="form-input" id="new-adults" required>
+          </div>
+          <div class="form-group">
+            <label>Total Children</label>
+            <input type="number" min="0" max="10" value="0" class="form-input" id="new-children">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Vehicle Number (Optional)</label>
+            <input type="text" class="form-input" id="new-vehicle" placeholder="e.g. KA-01-AB-1234">
+          </div>
+          <div class="form-group">
+            <label>Booking Source</label>
+            <select class="form-select" id="new-source">
+              <option value="Airbnb">Airbnb</option>
+              <option value="Direct">Direct / WhatsApp</option>
+              <option value="Booking.com">Booking.com</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button type="button" class="btn btn-outline" data-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Booking & Provision ID Slots</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Reminder & WhatsApp Share -->
+  <div class="modal-overlay" id="modal-reminder">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Guest Reminder & Upload Link</h2>
+        <button class="modal-close-btn" data-close>&times;</button>
+      </div>
+      <div id="reminder-modal-body">
+        <div class="form-group">
+          <label>Pre-formatted WhatsApp / Airbnb Message:</label>
+          <textarea class="form-textarea" id="reminder-text" rows="8" readonly style="font-family:monospace; font-size:13px;"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Direct Guest Check-in Link:</label>
+          <input type="text" class="form-input" id="reminder-portal-url" readonly>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button class="btn btn-outline" id="btn-copy-reminder">📋 Copy Message</button>
+          <button class="btn btn-outline" id="btn-copy-portal-url">🔗 Copy Link Only</button>
+          <a href="#" target="_blank" class="btn btn-whatsapp" id="btn-open-whatsapp">💬 Open WhatsApp</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Email Preview & Emergency Dispatch -->
+  <div class="modal-overlay" id="modal-email-preview">
+    <div class="modal-content" style="max-width:760px;">
+      <div class="modal-header">
+        <h2 id="email-preview-title">Society Email Preview</h2>
+        <button class="modal-close-btn" data-close>&times;</button>
+      </div>
+      <div class="form-group">
+        <label>Recipient Society / Security Email:</label>
+        <input type="email" class="form-input" id="preview-recipient-email">
+      </div>
+      <div class="form-group">
+        <label>Subject Line:</label>
+        <input type="text" class="form-input" id="preview-subject" readonly>
+      </div>
+      <div class="form-group">
+        <label>Email Content & ID Attachments Preview:</label>
+        <div id="preview-email-frame-container" style="background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; overflow:hidden; max-height:380px; overflow-y:auto; padding:10px;">
+          <!-- HTML injected here -->
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+        <span id="preview-dispatch-warning" style="font-size:13px; color:var(--warning);"></span>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn btn-outline" data-close>Close</button>
+          <button type="button" class="btn btn-emergency" id="btn-confirm-dispatch">⚡ Send Email Now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Settings & Email Template Customizer -->
+  <div class="modal-overlay" id="modal-settings">
+    <div class="modal-content" style="max-width:780px;">
+      <div class="modal-header">
+        <h2>⚙️ Society & Email Template Configuration</h2>
+        <button class="modal-close-btn" data-close>&times;</button>
+      </div>
+      <form id="form-settings">
+        
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; border-bottom:1px solid var(--border-subtle); padding-bottom:6px;">
+          🏢 1. Society Security & Host Contacts
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Society / Security Office Name *</label>
+            <input type="text" class="form-input" id="set-society-name" required>
+          </div>
+          <div class="form-group">
+            <label>Society / Security Email (TO Recipient) *</label>
+            <input type="email" class="form-input" id="set-society-email" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Host Name *</label>
+            <input type="text" class="form-input" id="set-host-name" required>
+          </div>
+          <div class="form-group">
+            <label>Host Phone Number *</label>
+            <input type="text" class="form-input" id="set-host-phone" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Host Email (Reply-To)</label>
+            <input type="email" class="form-input" id="set-host-email" required>
+          </div>
+          <div class="form-group">
+            <label>CC Email(s) (Comma-separated for backup/receipts)</label>
+            <input type="text" class="form-input" id="set-email-cc" placeholder="e.g. host@example.com, manager@example.com">
+          </div>
+        </div>
+
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin:20px 0 12px 0; border-bottom:1px solid var(--border-subtle); padding-bottom:6px;">
+          ✉️ 2. Strict Email Template & Content Formatting
+        </div>
+
+        <div class="form-group">
+          <label>Subject Line Template *</label>
+          <input type="text" class="form-input" id="set-subject-template" required>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+            Available Tags: <code style="color:#a5b4fc;">{unit}</code>, <code style="color:#a5b4fc;">{guest_name}</code>, <code style="color:#a5b4fc;">{adult_count}</code>, <code style="color:#a5b4fc;">{check_in}</code>, <code style="color:#a5b4fc;">{check_out}</code>, <code style="color:#a5b4fc;">{vehicle}</code>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Custom Introduction & Purpose Text *</label>
+          <textarea class="form-textarea" id="set-intro-text" rows="3" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Mandatory Disclaimer / Society Rules Note</label>
+          <textarea class="form-textarea" id="set-disclaimer-text" rows="2"></textarea>
+        </div>
+
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin:20px 0 12px 0; border-bottom:1px solid var(--border-subtle); padding-bottom:6px;">
+          🤖 3. Automated Scheduler Rules
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Auto-Dispatch Window (Hours before Check-in)</label>
+            <input type="number" min="1" max="72" class="form-input" id="set-dispatch-hours" required>
+          </div>
+          <div class="form-group">
+            <label>Auto-Dispatch Enabled</label>
+            <select class="form-select" id="set-auto-dispatch">
+              <option value="true">Enabled (Auto-send when 100% IDs ready)</option>
+              <option value="false">Disabled (Manual trigger only)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px;">
+          <button type="button" class="btn btn-outline" data-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Configuration & Template</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Logs -->
+  <div class="modal-overlay" id="modal-logs">
+    <div class="modal-content" style="max-width:850px;">
+      <div class="modal-header">
+        <h2>Society Email Dispatch Audit Trail</h2>
+        <button class="modal-close-btn" data-close>&times;</button>
+      </div>
+      <div id="logs-container" style="max-height:480px; overflow-y:auto;">
+        <!-- Log entries injected here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden File Input for Host Manual ID Upload -->
+  <input type="file" id="host-manual-file-input" style="display:none;" accept="image/*,application/pdf">
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>

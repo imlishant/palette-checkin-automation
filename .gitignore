@@ -1,0 +1,43 @@
+# ==========================================
+# SECRETS & ENVIRONMENT VARIABLES (NEVER COMMIT)
+# ==========================================
+.env
+.env.*
+!.env.example
+
+# ==========================================
+# SQLITE DATABASE & PERSISTENT DATA
+# ==========================================
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ==========================================
+# GUEST ID DOCUMENTS & UPLOADS
+# ==========================================
+uploads/
+!uploads/
+uploads/*
+!uploads/secure_ids/
+uploads/secure_ids/*
+!uploads/secure_ids/.gitkeep
+
+# ==========================================
+# DEPENDENCIES & BUILD
+# ==========================================
+node_modules/
+
+# ==========================================
+# LOGS, OS & IDE ARTIFACTS
+# ==========================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
