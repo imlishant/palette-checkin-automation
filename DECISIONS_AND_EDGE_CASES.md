@@ -166,6 +166,12 @@ Residential societies and apartment HOAs require verified government identity pr
   4. **Dedicated Vehicle Card**: Clean optional vehicle plate registration with immediate independent save.
   5. **Real-time Non-blocking Progress**: Replaced confusing bottom barrier with live registration progress bar.
 
+### ADR-021: Render Build Lifecycle & Cloudflare CDN Edge Cache Invalidation
+* **Context**: Explaining the delay between pushing commits to GitHub and seeing live visual updates on custom subdomains.
+* **Decision**:
+  1. **Cloud Container Build Pipeline**: Render runs an asynchronous 5-step build pipeline (Git Fetch $\rightarrow$ Dependency Install $\rightarrow$ Environment Setup $\rightarrow$ Healthcheck $\rightarrow$ Zero-Downtime Traffic Switch). On free tiers, this pipeline takes 2–4 minutes to complete.
+  2. **Cloudflare Edge Caching**: Subdomain routes on Render utilize Cloudflare edge caching. Static assets (`.js`, `.css`, `.html`) must include versioned query strings (`?v=4.0`) to bypass stale intermediate proxy caches immediately upon deploy.
+
 ---
 
 ## 3. Edge Case Registry & Handling
