@@ -172,6 +172,15 @@ Residential societies and apartment HOAs require verified government identity pr
   1. **Cloud Container Build Pipeline**: Render runs an asynchronous 5-step build pipeline (Git Fetch $\rightarrow$ Dependency Install $\rightarrow$ Environment Setup $\rightarrow$ Healthcheck $\rightarrow$ Zero-Downtime Traffic Switch). On free tiers, this pipeline takes 2–4 minutes to complete.
   2. **Cloudflare Edge Caching**: Subdomain routes on Render utilize Cloudflare edge caching. Static assets (`.js`, `.css`, `.html`) must include versioned query strings (`?v=4.0`) to bypass stale intermediate proxy caches immediately upon deploy.
 
+### ADR-022: SMTP Protocol Security Modes (Port 587 STARTTLS vs Port 465 SSL)
+* **Context**: User asked if `SMTP_SECURE=false` means the connection is unsecure.
+* **Decision**:
+  1. **SMTP Industry Standard Convention**:
+     * `secure: true` strictly dictates direct **SSL encryption from the very first byte**, which is only used on legacy **Port 465**.
+     * `secure: false` is the required standard for **Port 587 (Submission)**.
+  2. **STARTTLS Dynamic Encryption**: On Port 587 with `secure: false`, Nodemailer establishes the TCP handshake and immediately issues the `STARTTLS` command to upgrade the socket to **TLS 1.2 / TLS 1.3 encryption** before any credentials, authentication tokens, or email bodies are sent over the wire.
+  3. **Zero Security Compromise**: Setting `SMTP_SECURE=false` on Port 587 is 100% encrypted, secure, and Google's official recommended configuration for Gmail SMTP. Setting it to `true` on Port 587 would cause the connection to hang and fail.
+
 ---
 
 ## 3. Edge Case Registry & Handling
@@ -215,6 +224,14 @@ Residential societies and apartment HOAs require verified government identity pr
   * **Email Routing**: Configurable in dashboard `⚙️ Settings` or `.env` (`DEFAULT_SOCIETY_EMAIL`). For testing, host can set their own email address as recipient to receive actual emails with attachments.
   * **Testing Workflow**: Outlined step-by-step procedure to test with past reservations.
 
+### Log Entry: 2026-09-04 — SMTP Protocol Security (`SMTP_SECURE=false` Clarification)
+* **User Inquiry**: *is it unsecure means?* (regarding `SMTP_SECURE = false` in Render environment variables)
+* **Clarification**:
+  * Explained that `SMTP_SECURE=false` is standard Nodemailer syntax for **Port 587 STARTTLS**.
+  * The connection starts over TCP and immediately upgrades to **TLS 1.2 / TLS 1.3 encryption** before authentication or sending data.
+  * `SMTP_SECURE=true` is only for legacy SSL on Port 465.
+  * Confirmed that `SMTP_SECURE=false` with `SMTP_PORT=587` is **100% encrypted, secure, and Google's recommended standard**.
+
 ---
 
 ## 5. Backlog & Future Improvement Suggestions
@@ -225,3 +242,4 @@ Residential societies and apartment HOAs require verified government identity pr
 - [ ] **OCR ID Auto-Extraction**: Read guest name and document type automatically from uploaded Aadhaar/Passport images.
 - [ ] **Post-Checkout ID Auto-Purge Cron**: Scheduled job to automatically delete ID photo files 48 hours after check-out for enhanced data privacy compliance.
 - [ ] **Multi-Property Grouping / Building Selector**: Ability to assign different society security email addresses to different apartment buildings.
+
