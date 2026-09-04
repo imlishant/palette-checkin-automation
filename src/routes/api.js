@@ -10,6 +10,13 @@ const {
   deleteBooking
 } = require('../services/bookingService');
 const {
+  getAllListings,
+  getListingById,
+  createListing,
+  updateListing,
+  deleteListing
+} = require('../services/listingService');
+const {
   uploadAdultId,
   removeAdultId,
   updateAdultMetadata
@@ -51,6 +58,89 @@ router.post('/auth/verify-pin', (req, res) => {
 
 // Protect all following routes with requireAdminAuth
 router.use(requireAdminAuth);
+
+// --- Listings Management Routes ---
+router.get('/listings', (req, res) => {
+  try {
+    const listings = getAllListings();
+    res.json({ success: true, listings });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/listings/:id', (req, res) => {
+  try {
+    const listing = getListingById(req.params.id);
+    if (!listing) return res.status(404).json({ success: false, error: 'Listing not found' });
+    res.json({ success: true, listing });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/listings', (req, res) => {
+  try {
+    const {
+      name,
+      unit_flat_number,
+      society_name,
+      society_email,
+      email_cc_list,
+      host_name,
+      host_phone,
+      host_email,
+      email_subject_template,
+      email_intro_text,
+      email_disclaimer_text
+    } = req.body;
+
+    if (!unit_flat_number || !society_email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide at least a Flat/Unit Number and Society Security Email.'
+      });
+    }
+
+    const listing = createListing({
+      name: name || `Flat ${unit_flat_number}`,
+      unit_flat_number,
+      society_name,
+      society_email,
+      email_cc_list,
+      host_name,
+      host_phone,
+      host_email,
+      email_subject_template,
+      email_intro_text,
+      email_disclaimer_text
+    });
+
+    res.status(201).json({ success: true, listing });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.put('/listings/:id', (req, res) => {
+  try {
+    const updated = updateListing(req.params.id, req.body);
+    res.json({ success: true, listing: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.delete('/listings/:id', (req, res) => {
+  try {
+    const result = deleteListing(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// --- Bookings Routes ---
 router.get('/bookings', (req, res) => {
   try {
     const bookings = getAllBookings();
@@ -84,7 +174,8 @@ router.post('/bookings', (req, res) => {
       total_adults,
       total_children,
       vehicle_number,
-      source
+      source,
+      listing_id
     } = req.body;
 
     if (!guest_primary_name || !unit_flat_number || !check_in_date_time || !check_out_date_time) {
@@ -104,7 +195,8 @@ router.post('/bookings', (req, res) => {
       total_adults: parseInt(total_adults || 1, 10),
       total_children: parseInt(total_children || 0, 10),
       vehicle_number,
-      source: source || 'Airbnb'
+      source: source || 'Airbnb',
+      listing_id: listing_id || null
     });
 
     res.status(201).json({ success: true, booking });

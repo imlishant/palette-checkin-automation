@@ -1,5 +1,6 @@
 // Host Operations Dashboard Logic
 let allBookings = [];
+let allListings = [];
 let currentFilter = 'ALL';
 let activeBookingForEmail = null;
 let activeAdultIdForUpload = null;
@@ -49,6 +50,7 @@ const modalNewBooking = document.getElementById('modal-new-booking');
 const modalReminder = document.getElementById('modal-reminder');
 const modalEmailPreview = document.getElementById('modal-email-preview');
 const modalSettings = document.getElementById('modal-settings');
+const modalListings = document.getElementById('modal-listings');
 const modalLogs = document.getElementById('modal-logs');
 
 // Toast helper
@@ -77,9 +79,109 @@ function formatDateTime(isoString) {
   });
 }
 
+// Fetch and cache listings
+async function loadListings() {
+  // 1. Instant rehydration from localStorage
+  const cached = localStorage.getItem('pp_admin_listings');
+  if (cached) {
+    try {
+      allListings = JSON.parse(cached);
+      populateListingDropdown(allListings);
+      renderListingsList(allListings);
+    } catch (e) {}
+  }
+
+  // 2. Fetch fresh from server
+  try {
+    const res = await authFetch('/api/listings');
+    const data = await res.json();
+    if (data.success && Array.isArray(data.listings)) {
+      allListings = data.listings;
+      localStorage.setItem('pp_admin_listings', JSON.stringify(allListings));
+      populateListingDropdown(allListings);
+      renderListingsList(allListings);
+    }
+  } catch (err) {
+    console.warn('[LISTINGS] Could not fetch remote listings, using cached:', err.message);
+  }
+}
+
+function populateListingDropdown(listings) {
+  const select = document.getElementById('new-listing-id');
+  if (!select) return;
+
+  const currentVal = select.value;
+  select.innerHTML = `<option value="">-- Choose a Property Listing --</option>` +
+    listings.map(l => `
+      <option value="${l.id}">🏠 ${escapeHtml(l.name)} (Flat ${escapeHtml(l.unit_flat_number)})</option>
+    `).join('');
+
+  if (currentVal && listings.some(l => l.id === currentVal)) {
+    select.value = currentVal;
+  }
+}
+
+function renderListingsList(listings) {
+  const container = document.getElementById('listings-list-container');
+  const countBadge = document.getElementById('listings-summary-count');
+  if (!container) return;
+
+  if (countBadge) {
+    countBadge.textContent = `${listings.length} Active Listing${listings.length === 1 ? '' : 's'}`;
+  }
+
+  if (listings.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:40px; background:#0f172a; border-radius:8px; border:1px dashed #475569;">
+        <div style="font-size:32px; margin-bottom:8px;">🏠</div>
+        <div style="font-size:15px; font-weight:600; color:#cbd5e1;">No Property Listings Configured</div>
+        <p style="font-size:13px; color:#94a3b8; margin:6px 0 16px 0;">Add your first apartment listing to prefill booking entries and configure society email routing.</p>
+        <button type="button" class="btn btn-primary" onclick="openListingEditor()">+ Add First Listing</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = listings.map(l => `
+    <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:16px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
+      <div style="flex:1;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+          <span style="font-size:16px; font-weight:700; color:#ffffff;">${escapeHtml(l.name)}</span>
+          <span class="badge info" style="font-weight:700;">Flat ${escapeHtml(l.unit_flat_number)}</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:6px; font-size:12px; color:#94a3b8; margin-top:8px;">
+          <div>🏢 <strong>Society:</strong> <span style="color:#e2e8f0;">${escapeHtml(l.society_name)}</span></div>
+          <div>✉️ <strong>Security TO:</strong> <span style="color:#e2e8f0;">${escapeHtml(l.society_email)}</span></div>
+          <div>👥 <strong>CC List:</strong> <span style="color:#e2e8f0;">${escapeHtml(l.email_cc_list || 'None')}</span></div>
+          <div>👤 <strong>Host:</strong> <span style="color:#e2e8f0;">${escapeHtml(l.host_name || 'Default')}</span></div>
+        </div>
+
+        ${l.email_subject_template ? `
+          <div style="font-size:11px; color:#64748b; margin-top:8px; background:#1e293b; padding:4px 8px; border-radius:4px;">
+            🏷️ Subject: <code style="color:#a5b4fc;">${escapeHtml(l.email_subject_template)}</code>
+          </div>
+        ` : ''}
+      </div>
+
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-outline" style="padding:6px 10px; font-size:12px;" onclick="openListingEditor('${l.id}')">
+          ✏️ Edit
+        </button>
+        <button type="button" class="btn btn-outline" style="padding:6px 10px; font-size:12px; color:#ef4444; border-color:#ef4444;" onclick="deleteListingAction('${l.id}')" title="Archive / Delete Listing">
+          🗑️
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
 // Fetch all bookings
 async function loadBookings() {
   try {
+    if (allListings.length === 0) {
+      loadListings();
+    }
     const res = await authFetch('/api/bookings');
     const data = await res.json();
     if (data.success) {
@@ -192,8 +294,9 @@ function renderBookings() {
             <div class="unit-badge">Flat ${b.unit_flat_number}</div>
             <div class="guest-details">
               <div class="guest-name">
-                ${b.guest_primary_name}
+                ${escapeHtml(b.guest_primary_name)}
                 ${timingBadge}
+                ${b.listing ? `<span class="badge" style="background:#312e81; color:#c7d2fe; font-size:10px; margin-left:6px; font-weight:600;">🏠 ${escapeHtml(b.listing.name)}</span>` : ''}
               </div>
               <div class="guest-sub">
                 <span>Ref: <strong>${b.id}</strong> (${b.source})</span>
@@ -533,8 +636,33 @@ document.getElementById('btn-new-booking').addEventListener('click', () => {
 
   document.getElementById('new-checkin').value = checkinDefault;
   document.getElementById('new-checkout').value = checkoutDefault;
+  
+  // Refresh listing dropdown
+  populateListingDropdown(allListings);
+
+  // If there's at least one listing, select it and autofill unit by default
+  const listingSelect = document.getElementById('new-listing-id');
+  if (listingSelect && allListings.length > 0 && !listingSelect.value) {
+    listingSelect.value = allListings[0].id;
+    document.getElementById('new-unit').value = allListings[0].unit_flat_number;
+  }
+
   modalNewBooking.classList.add('active');
 });
+
+// Auto-fill unit when selecting a property listing
+const newListingSelect = document.getElementById('new-listing-id');
+if (newListingSelect) {
+  newListingSelect.addEventListener('change', (e) => {
+    const selectedId = e.target.value;
+    if (selectedId) {
+      const listing = allListings.find(l => l.id === selectedId);
+      if (listing) {
+        document.getElementById('new-unit').value = listing.unit_flat_number;
+      }
+    }
+  });
+}
 
 // Auto-open calendar picker when clicking anywhere on date inputs
 document.querySelectorAll('input[type="date"]').forEach(input => {
@@ -561,7 +689,8 @@ document.getElementById('form-new-booking').addEventListener('submit', async (e)
     total_adults: parseInt(document.getElementById('new-adults').value, 10),
     total_children: parseInt(document.getElementById('new-children').value || 0, 10),
     vehicle_number: document.getElementById('new-vehicle').value,
-    source: document.getElementById('new-source').value
+    source: document.getElementById('new-source').value,
+    listing_id: document.getElementById('new-listing-id').value || null
   };
 
   try {
@@ -749,6 +878,116 @@ document.getElementById('btn-open-logs').addEventListener('click', async () => {
   }
 });
 
+// Listings Management Modal Triggers
+document.getElementById('btn-open-listings').addEventListener('click', () => {
+  loadListings();
+  closeListingEditor();
+  modalListings.classList.add('active');
+});
+
+document.getElementById('btn-add-new-listing').addEventListener('click', () => {
+  openListingEditor();
+});
+
+document.getElementById('btn-cancel-listing-edit').addEventListener('click', closeListingEditor);
+document.getElementById('btn-cancel-listing-edit-2').addEventListener('click', closeListingEditor);
+
+function openListingEditor(id = null) {
+  const container = document.getElementById('listing-editor-container');
+  const title = document.getElementById('listing-editor-title');
+  const form = document.getElementById('form-listing-editor');
+
+  form.reset();
+  document.getElementById('edit-listing-id').value = '';
+
+  if (id) {
+    const listing = allListings.find(l => l.id === id);
+    if (listing) {
+      title.textContent = '✏️ Edit Property Listing';
+      document.getElementById('edit-listing-id').value = listing.id;
+      document.getElementById('edit-listing-name').value = listing.name || '';
+      document.getElementById('edit-listing-unit').value = listing.unit_flat_number || '';
+      document.getElementById('edit-listing-society-name').value = listing.society_name || '';
+      document.getElementById('edit-listing-society-email').value = listing.society_email || '';
+      document.getElementById('edit-listing-cc').value = listing.email_cc_list || '';
+      document.getElementById('edit-listing-host-name').value = listing.host_name || '';
+      document.getElementById('edit-listing-host-phone').value = listing.host_phone || '';
+      document.getElementById('edit-listing-subject-template').value = listing.email_subject_template || '';
+      document.getElementById('edit-listing-intro-text').value = listing.email_intro_text || '';
+      document.getElementById('edit-listing-disclaimer-text').value = listing.email_disclaimer_text || '';
+    }
+  } else {
+    title.textContent = '➕ Add New Property Listing';
+  }
+
+  container.style.display = 'block';
+  container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeListingEditor() {
+  const container = document.getElementById('listing-editor-container');
+  if (container) container.style.display = 'none';
+}
+
+// Save Listing Form
+document.getElementById('form-listing-editor').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('edit-listing-id').value;
+  const payload = {
+    name: document.getElementById('edit-listing-name').value.trim(),
+    unit_flat_number: document.getElementById('edit-listing-unit').value.trim(),
+    society_name: document.getElementById('edit-listing-society-name').value.trim(),
+    society_email: document.getElementById('edit-listing-society-email').value.trim(),
+    email_cc_list: document.getElementById('edit-listing-cc').value.trim(),
+    host_name: document.getElementById('edit-listing-host-name').value.trim() || null,
+    host_phone: document.getElementById('edit-listing-host-phone').value.trim() || null,
+    email_subject_template: document.getElementById('edit-listing-subject-template').value.trim() || null,
+    email_intro_text: document.getElementById('edit-listing-intro-text').value.trim() || null,
+    email_disclaimer_text: document.getElementById('edit-listing-disclaimer-text').value.trim() || null
+  };
+
+  try {
+    const url = id ? `/api/listings/${id}` : '/api/listings';
+    const method = id ? 'PUT' : 'POST';
+
+    const res = await authFetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showToast(id ? '✓ Listing updated successfully!' : '✓ New listing created!', 'success');
+      closeListingEditor();
+      await loadListings();
+      loadBookings();
+    } else {
+      showToast(data.error || 'Failed to save listing', 'danger');
+    }
+  } catch (err) {
+    showToast('Error saving listing: ' + err.message, 'danger');
+  }
+});
+
+async function deleteListingAction(id) {
+  if (!confirm('Are you sure you want to archive/delete this property listing?')) return;
+
+  try {
+    const res = await authFetch(`/api/listings/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✓ Listing archived.', 'info');
+      await loadListings();
+      loadBookings();
+    } else {
+      showToast(data.error || 'Failed to delete listing', 'danger');
+    }
+  } catch (err) {
+    showToast('Error deleting listing: ' + err.message, 'danger');
+  }
+}
+
 // Initial Load
 
 // Admin Login Form Submit
@@ -768,6 +1007,7 @@ document.getElementById('form-admin-login').addEventListener('submit', async (e)
     if (data.success) {
       setAdminPin(pinInput);
       document.getElementById('admin-lock-screen').style.display = 'none';
+      loadListings();
       loadBookings();
     } else {
       errorMsg.textContent = data.error || 'Incorrect PIN.';
@@ -788,5 +1028,6 @@ document.getElementById('btn-lock-dashboard').addEventListener('click', () => {
 
 // Initial Auth Check & Load
 if (checkAuth()) {
+  loadListings();
   loadBookings();
 }

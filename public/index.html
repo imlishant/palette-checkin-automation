@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Palette & Pillows - Guest Check-in & Society Email Automation</title>
-  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/admin.css?v=4.1">
 </head>
 <body>
 
@@ -20,6 +20,9 @@
       </div>
 
       <div class="header-actions">
+        <button class="btn btn-outline" id="btn-open-listings" title="Manage property listings, society emails, and templates">
+          🏠 My Listings
+        </button>
         <button class="btn btn-outline" id="btn-run-scheduler" title="Scan and auto-dispatch ready bookings">
           ⚡ Run Scheduler Now
         </button>
@@ -127,6 +130,17 @@
         <button class="modal-close-btn" data-close>&times;</button>
       </div>
       <form id="form-new-booking">
+        
+        <div class="form-group" style="margin-bottom:16px; background:#1e293b; padding:12px 14px; border-radius:8px; border:1px solid #475569;">
+          <label style="font-weight:700; color:#a5b4fc; display:flex; justify-content:space-between;">
+            <span>🏠 Select Property / Listing Profile *</span>
+            <span style="font-size:11px; font-weight:400; color:#94a3b8;">Prefills flat & binds society routing</span>
+          </label>
+          <select class="form-select" id="new-listing-id" style="font-size:14px; font-weight:600; border-color:#6366f1; background:#0f172a; color:#ffffff; margin-top:6px;">
+            <option value="">-- Choose a Property Listing --</option>
+          </select>
+        </div>
+
         <div class="form-grid-2">
           <div class="form-group">
             <label>Primary Guest Name *</label>
@@ -344,6 +358,116 @@
     </div>
   </div>
 
+  <!-- Modal: Listings & Property Profiles Manager -->
+  <div class="modal-overlay" id="modal-listings">
+    <div class="modal-content" style="max-width:880px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="margin:0;">🏠 Property Listings & Society Profiles</h2>
+          <p style="font-size:12px; color:var(--text-secondary); margin:4px 0 0 0;">
+            Manage society security emails, CC recipients, and templates per property listing.
+          </p>
+        </div>
+        <button class="modal-close-btn" data-close>&times;</button>
+      </div>
+
+      <!-- Action Bar -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0; padding-bottom:12px; border-bottom:1px solid var(--border-subtle);">
+        <div style="font-size:13px; font-weight:600; color:var(--text-primary);" id="listings-summary-count">
+          0 Active Listings
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-add-new-listing" style="font-size:12px; padding:8px 14px;">
+          + Add New Property Listing
+        </button>
+      </div>
+
+      <!-- Listing Editor Form (Hidden by default, shown when adding/editing) -->
+      <div id="listing-editor-container" style="display:none; background:#182235; border:1px solid #6366f1; border-radius:10px; padding:20px; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="margin:0; font-size:16px; color:#a5b4fc;" id="listing-editor-title">✏️ Edit Property Listing</h3>
+          <button type="button" class="btn btn-outline" id="btn-cancel-listing-edit" style="padding:4px 10px; font-size:12px;">Cancel</button>
+        </div>
+        
+        <form id="form-listing-editor">
+          <input type="hidden" id="edit-listing-id">
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Listing / Property Label *</label>
+              <input type="text" class="form-input" id="edit-listing-name" placeholder="e.g. Green Valley - Flat A-1204" required>
+            </div>
+            <div class="form-group">
+              <label>Unit / Flat Number *</label>
+              <input type="text" class="form-input" id="edit-listing-unit" placeholder="e.g. A-1204" required>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Society / Building Name *</label>
+              <input type="text" class="form-input" id="edit-listing-society-name" placeholder="e.g. Green Valley Heights" required>
+            </div>
+            <div class="form-group">
+              <label>Society Security Email (TO Recipient) *</label>
+              <input type="email" class="form-input" id="edit-listing-society-email" placeholder="e.g. security@greenvalley.org" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Management & Host CC Emails (Comma-separated)</label>
+            <input type="text" class="form-input" id="edit-listing-cc" placeholder="e.g. host@example.com, manager@example.com">
+          </div>
+
+          <!-- Advanced Template Overrides Collapsible -->
+          <details style="margin:16px 0; background:#0f172a; padding:12px; border-radius:8px; border:1px solid #334155;">
+            <summary style="cursor:pointer; font-size:13px; font-weight:600; color:#cbd5e1;">
+              ⚙️ Custom Email Templates & Contacts for this Listing (Optional)
+            </summary>
+            
+            <div class="form-grid-2" style="margin-top:12px;">
+              <div class="form-group">
+                <label>Host Name for this Listing</label>
+                <input type="text" class="form-input" id="edit-listing-host-name" placeholder="Leave blank to use global host name">
+              </div>
+              <div class="form-group">
+                <label>Host Phone for this Listing</label>
+                <input type="text" class="form-input" id="edit-listing-host-phone" placeholder="Leave blank to use global host phone">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top:8px;">
+              <label>Custom Subject Line Template</label>
+              <input type="text" class="form-input" id="edit-listing-subject-template" placeholder="Leave blank to use global subject template">
+            </div>
+
+            <div class="form-group">
+              <label>Custom Intro Text</label>
+              <textarea class="form-textarea" id="edit-listing-intro-text" rows="2" placeholder="Leave blank to use global intro text"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Custom Disclaimer / Gate Instructions</label>
+              <textarea class="form-textarea" id="edit-listing-disclaimer-text" rows="2" placeholder="Leave blank to use global disclaimer"></textarea>
+            </div>
+          </details>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+            <button type="button" class="btn btn-outline" id="btn-cancel-listing-edit-2">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-listing">💾 Save Property Listing</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Listings List Container -->
+      <div id="listings-list-container" style="max-height:460px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
+        <div style="text-align:center; padding:30px; color:var(--text-muted);">
+          Loading properties...
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Modal: Logs -->
   <div class="modal-overlay" id="modal-logs">
     <div class="modal-content" style="max-width:850px;">
@@ -363,6 +487,6 @@
   <!-- Toast Container -->
   <div id="toast-container"></div>
 
-  <script src="/js/admin.js"></script>
+  <script src="/js/admin.js?v=4.1"></script>
 </body>
 </html>

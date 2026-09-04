@@ -18,18 +18,19 @@ function createBooking(data) {
   const token = generateToken();
   const totalAdults = parseInt(data.total_adults || 1, 10);
   const totalChildren = parseInt(data.total_children || 0, 10);
+  const listingId = data.listing_id || null;
 
   const insertBooking = db.prepare(`
     INSERT INTO bookings (
       id, token, guest_primary_name, guest_phone, guest_email,
       unit_flat_number, check_in_date_time, check_out_date_time,
       total_adults, total_children, vehicle_number, source,
-      society_email_status
+      society_email_status, listing_id
     ) VALUES (
       ?, ?, ?, ?, ?,
       ?, ?, ?,
       ?, ?, ?, ?,
-      'PENDING_IDS'
+      'PENDING_IDS', ?
     )
   `);
 
@@ -54,7 +55,8 @@ function createBooking(data) {
       totalAdults,
       totalChildren,
       data.vehicle_number || null,
-      data.source || 'Airbnb'
+      data.source || 'Airbnb',
+      listingId
     );
 
     for (let i = 1; i <= totalAdults; i++) {
@@ -91,6 +93,12 @@ function getBookingById(id) {
     SELECT * FROM guest_adults WHERE booking_id = ? ORDER BY adult_index ASC
   `).all(id);
 
+  // Fetch linked listing profile if available
+  let listing = null;
+  if (booking.listing_id) {
+    listing = db.prepare(`SELECT * FROM listings WHERE id = ?`).get(booking.listing_id) || null;
+  }
+
   // An adult is truly complete ONLY IF:
   // 1. A valid ID document is attached (status UPLOADED/VERIFIED & file exists)
   // 2. A valid legal name (min 3 characters) is provided
@@ -111,6 +119,7 @@ function getBookingById(id) {
 
   return {
     ...booking,
+    listing,
     adults: adults.map(a => ({
       ...a,
       has_valid_name: isValidGuestName(a.full_name),
@@ -190,6 +199,10 @@ function updateBookingDetails(id, updates) {
   if (updates.unit_flat_number !== undefined) {
     fields.push('unit_flat_number = ?');
     values.push(updates.unit_flat_number);
+  }
+  if (updates.listing_id !== undefined) {
+    fields.push('listing_id = ?');
+    values.push(updates.listing_id);
   }
 
   if (fields.length === 0) return getBookingById(id);

@@ -31,6 +31,7 @@ function buildSocietyEmailHtml(booking, societyName, hostName, hostPhone, hostEm
   const checkInStr = formatDateTime(booking.check_in_date_time);
   const checkOutStr = formatDateTime(booking.check_out_date_time);
   const vehicleStr = booking.vehicle_number ? booking.vehicle_number : 'None / Cab / Public Transit';
+  const listing = booking.listing || null;
 
   // Template variables available for admin customization
   const templateVars = {
@@ -51,13 +52,13 @@ function buildSocietyEmailHtml(booking, societyName, hostName, hostPhone, hostEm
     host_email: hostEmail
   };
 
-  const rawIntro = getSetting(
+  const rawIntro = (listing && listing.email_intro_text) || getSetting(
     'email_intro_text',
     'Please permit gate entry for the following registered guest(s) arriving at Flat {unit}. All verified government identity proofs are attached with this email for society security compliance.'
   );
   const interpolatedIntro = interpolateTemplate(rawIntro, templateVars);
 
-  const rawDisclaimer = getSetting(
+  const rawDisclaimer = (listing && listing.email_disclaimer_text) || getSetting(
     'email_disclaimer_text',
     'Attached files contain confidential identity documents for society verification and building security clearance only.'
   );
@@ -229,12 +230,16 @@ async function dispatchSocietyEmail(bookingId, options = {}) {
     };
   }
 
-  const societyName = getSetting('society_name', 'Green Valley Heights Security Desk');
-  const recipientEmail = overrideEmail || getSetting('society_email', 'society.security@greenvalleyrwa.org');
-  const hostName = getSetting('host_name', 'Palette & Pillows Hosting');
-  const hostPhone = getSetting('host_phone', '+91 98765 43210');
-  const hostEmail = getSetting('host_email', 'host@paletteandpillows.com');
-  const rawCcList = getSetting('email_cc_list', hostEmail);
+  const listing = booking.listing || null;
+
+  const societyName = (listing && listing.society_name) || getSetting('society_name', 'Green Valley Heights Security Desk');
+  const recipientEmail = overrideEmail || (listing && listing.society_email) || getSetting('society_email', 'society.security@greenvalleyrwa.org');
+  const hostName = (listing && listing.host_name) || getSetting('host_name', 'Palette & Pillows Hosting');
+  const hostPhone = (listing && listing.host_phone) || getSetting('host_phone', '+91 98765 43210');
+  const hostEmail = (listing && listing.host_email) || getSetting('host_email', 'host@paletteandpillows.com');
+  const rawCcList = (listing && listing.email_cc_list !== null && listing.email_cc_list !== undefined)
+    ? listing.email_cc_list
+    : getSetting('email_cc_list', hostEmail);
   const ccEmails = rawCcList.split(',').map(s => s.trim()).filter(Boolean);
 
   const checkInStr = formatDateTime(booking.check_in_date_time);
@@ -254,7 +259,7 @@ async function dispatchSocietyEmail(bookingId, options = {}) {
     host_name: hostName
   };
 
-  const subjectTemplate = getSetting(
+  const subjectTemplate = (listing && listing.email_subject_template) || getSetting(
     'email_subject_template',
     '[Guest Arrival] Flat {unit} - {guest_name} ({adult_count} Adults) - {check_in}'
   );
@@ -298,23 +303,23 @@ async function dispatchSocietyEmail(bookingId, options = {}) {
     const nodemailer = require('nodemailer');
     const previewUrl = nodemailer.getTestMessageUrl(info);
     if (previewUrl) {
-      console.log(`[DISPATCH] Email Preview URL: ${previewUrl}`);
+      console.log(`[DISPATCH] Preview Ethereal URL: ${previewUrl}`);
     }
 
     // Update booking status
     const newStatus = dispatchedBy === 'HOST_OVERRIDE' && !booking.is_complete ? 'OVERRIDDEN' : 'SENT';
     db.prepare(`
-      UPDATE bookings
-      SET society_email_status = ?,
-          society_email_sent_at = datetime('now', 'localtime'),
-          updated_at = datetime('now', 'localtime')
+      UPDATE bookings SET
+        society_email_status = ?,
+        society_email_sent_at = datetime('now', 'localtime'),
+        updated_at = datetime('now', 'localtime')
       WHERE id = ?
     `).run(newStatus, bookingId);
 
   } catch (err) {
+    console.error(`[DISPATCH] Failed to send email for ${bookingId}:`, err);
     status = 'FAILED';
     errorMessage = err.message;
-    console.error(`[DISPATCH ERROR] Failed to send society email for ${bookingId}:`, err);
     throw err;
   } finally {
     // Record audit log
@@ -352,11 +357,13 @@ function previewSocietyEmail(bookingId) {
   const booking = getBookingById(bookingId);
   if (!booking) throw new Error(`Booking ${bookingId} not found.`);
 
-  const societyName = getSetting('society_name', 'Green Valley Heights Security Desk');
-  const hostName = getSetting('host_name', 'Palette & Pillows Hosting');
-  const hostPhone = getSetting('host_phone', '+91 98765 43210');
-  const hostEmail = getSetting('host_email', 'host@paletteandpillows.com');
-  const recipientEmail = getSetting('society_email', 'society.security@greenvalleyrwa.org');
+  const listing = booking.listing || null;
+
+  const societyName = (listing && listing.society_name) || getSetting('society_name', 'Green Valley Heights Security Desk');
+  const hostName = (listing && listing.host_name) || getSetting('host_name', 'Palette & Pillows Hosting');
+  const hostPhone = (listing && listing.host_phone) || getSetting('host_phone', '+91 98765 43210');
+  const hostEmail = (listing && listing.host_email) || getSetting('host_email', 'host@paletteandpillows.com');
+  const recipientEmail = (listing && listing.society_email) || getSetting('society_email', 'society.security@greenvalleyrwa.org');
 
   const checkInStr = formatDateTime(booking.check_in_date_time);
   const checkOutStr = formatDateTime(booking.check_out_date_time);
@@ -375,7 +382,7 @@ function previewSocietyEmail(bookingId) {
     host_name: hostName
   };
 
-  const subjectTemplate = getSetting(
+  const subjectTemplate = (listing && listing.email_subject_template) || getSetting(
     'email_subject_template',
     '[Guest Arrival] Flat {unit} - {guest_name} ({adult_count} Adults) - {check_in}'
   );

@@ -165,7 +165,62 @@ async function runTests() {
   assert.strictEqual(logs[0].attached_ids_count, 3);
   console.log('✅ Test 12: Audit trail logging verified.');
 
-  console.log('\n🎉 ALL 12 AUTOMATED TESTS PASSED SUCCESSFULLY! 🚀\n');
+  // Step 13: Test Multi-Listing Profile Management (CRUD)
+  const { createListing, getAllListings, getListingById, updateListing, deleteListing } = require('../src/services/listingService');
+  const customListing = createListing({
+    name: 'Royal Residency 602',
+    unit_flat_number: 'B-602',
+    society_name: 'Royal Residency Security Wing',
+    society_email: 'royal.security@residency.in',
+    email_cc_list: 'manager@paletteandpillows.space, host@paletteandpillows.space',
+    host_name: 'Palette Royal Host',
+    host_phone: '+91 99999 88888',
+    email_subject_template: '[CLEARANCE] Flat {unit} - {guest_name} Arrival'
+  });
+
+  assert(customListing.id, 'Should generate a listing ID');
+  assert.strictEqual(customListing.unit_flat_number, 'B-602');
+  assert.strictEqual(customListing.society_email, 'royal.security@residency.in');
+
+  const allActiveListings = getAllListings();
+  assert(allActiveListings.length >= 2, 'Should have seeded listing + new custom listing');
+  console.log(`✅ Test 13: Multi-listing CRUD verified: Created listing ${customListing.id}.`);
+
+  // Step 14: Test Creating Booking Linked to Custom Listing
+  const linkedBooking = createBooking({
+    guest_primary_name: 'Anita Sen',
+    unit_flat_number: 'B-602',
+    check_in_date_time: new Date().toISOString(),
+    check_out_date_time: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
+    total_adults: 1,
+    listing_id: customListing.id
+  });
+
+  assert.strictEqual(linkedBooking.listing_id, customListing.id);
+  assert(linkedBooking.listing, 'Booking should have populated listing metadata');
+  assert.strictEqual(linkedBooking.listing.society_email, 'royal.security@residency.in');
+  console.log('✅ Test 14: Booking linked to custom listing verified with auto-populated metadata.');
+
+  // Step 15: Verify Listing-Specific Property Email Routing & Template Dispatch
+  uploadAdultId(linkedBooking.adults[0].id, {
+    path: mockFile1,
+    originalname: 'anita_aadhaar.jpg',
+    size: 200000
+  }, { full_name: 'Anita Sen', id_type: 'Aadhaar' });
+
+  const customDispatch = await dispatchSocietyEmail(linkedBooking.id, {
+    dispatchedBy: 'AUTO_SCHEDULER'
+  });
+
+  assert.strictEqual(customDispatch.success, true);
+  assert.strictEqual(customDispatch.recipientEmail, 'royal.security@residency.in', 'Must route to listing society email');
+
+  const customPreview = previewSocietyEmail(linkedBooking.id);
+  assert(customPreview.subject.includes('[CLEARANCE] Flat B-602 - Anita Sen Arrival'), 'Must use listing subject template');
+  assert(customPreview.html.includes('Royal Residency Security Wing'), 'HTML must include listing society name');
+  console.log('✅ Test 15: Property-aware society email routing, CC list, and custom templates verified.');
+
+  console.log('\n🎉 ALL 15 AUTOMATED TESTS PASSED SUCCESSFULLY! 🚀\n');
 }
 
 runTests().catch(err => {

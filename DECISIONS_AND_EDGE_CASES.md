@@ -181,6 +181,15 @@ Residential societies and apartment HOAs require verified government identity pr
   2. **STARTTLS Dynamic Encryption**: On Port 587 with `secure: false`, Nodemailer establishes the TCP handshake and immediately issues the `STARTTLS` command to upgrade the socket to **TLS 1.2 / TLS 1.3 encryption** before any credentials, authentication tokens, or email bodies are sent over the wire.
   3. **Zero Security Compromise**: Setting `SMTP_SECURE=false` on Port 587 is 100% encrypted, secure, and Google's official recommended configuration for Gmail SMTP. Setting it to `true` on Port 587 would cause the connection to hang and fail.
 
+### ADR-023: Multi-Listing Property Profiles & Property-Aware Society Email Routing
+* **Context**: Host manages multiple apartment listings across different societies/buildings. Settings needed to be stored per listing so each apartment profile (Flat #, Society Name, Security TO email, CC emails, custom templates) persists across redeployments, restarts, and different host devices.
+* **Decision**:
+  1. **Dedicated Listings Schema**: Created `listings` table in SQLite storing `id`, `name`, `unit_flat_number`, `society_name`, `society_email`, `email_cc_list`, `host_name`, `host_phone`, `host_email`, `email_subject_template`, `email_intro_text`, `email_disclaimer_text`, `is_active`.
+  2. **Booking-Listing Association**: Added `listing_id` column to `bookings` table. When creating bookings, hosts select from a property dropdown (`🏠 Select Property / Listing Profile`) that automatically prefills the flat/unit number.
+  3. **Property-Aware Email Dispatching**: `dispatchSocietyEmail` and `previewSocietyEmail` dynamically resolve recipient emails (`TO`), management CC lists, society name tags, and custom email subject/body templates from the associated listing profile (falling back to global defaults).
+  4. **Multi-Tier Persistence**: Listings are saved in SQLite database + cached in browser `localStorage` (`pp_admin_listings`) + automatically seeded on fresh boots.
+  5. **Host UI Management**: Added `🏠 My Listings` modal with card layout, full CRUD capabilities (`GET`, `POST`, `PUT`, `DELETE` via `/api/listings`), and collapsible custom template overrides.
+
 ---
 
 ## 3. Edge Case Registry & Handling
@@ -193,6 +202,7 @@ Residential societies and apartment HOAs require verified government identity pr
 | **4** | **Gate Emergency / Last-Minute Arrival** | Guests stuck at security gate with 1 ID missing; guards demanding immediate proof. | **Host 1-Click Gate Override**: Host can click `🚨 Gate Override` from their phone to dispatch an immediate compliance email with whatever IDs are available. |
 | **5** | **Large ID Photos Exceeding Email Limits** | Guests uploading high-res 15MB photos crashing email delivery. | **Upload Limits & MIME Validation**: Multer enforces 10MB per file, validates image/PDF MIME types, and securely sanitizes file paths. |
 | **6** | **WhatsApp Received IDs** | Guest texts ID photos directly to host WhatsApp instead of the portal link. | **Host Manual Dropzone**: Host dashboard includes `👥 IDs` manifest with direct dropzone to attach files on the guest's behalf in 5 seconds. |
+| **7** | **Multi-Property Society Email Isolation** | Dispatches going to the wrong society desk when managing multiple buildings. | **Listing-Specific Routing**: Each booking is bound to a `listing_id` with its own verified society security TO email, CC list, and custom intro text. |
 
 ---
 
@@ -232,14 +242,23 @@ Residential societies and apartment HOAs require verified government identity pr
   * `SMTP_SECURE=true` is only for legacy SSL on Port 465.
   * Confirmed that `SMTP_SECURE=false` with `SMTP_PORT=587` is **100% encrypted, secure, and Google's recommended standard**.
 
+### Log Entry: 2026-09-04 — Multi-Listing Management & Prefilled Booking Flow
+* **User Inquiry**: Host perspective multi-listing management where each listing profile is persistently saved with its own society information, To/CC emails, and templates, allowing prefilled booking creation.
+* **Solution Delivered**:
+  * Implemented `listings` schema and REST API (`/api/listings`).
+  * Added `🏠 My Listings` manager modal on Host Dashboard.
+  * Added `🏠 Select Property / Listing Profile` in `+ New Booking` form for instant auto-filling.
+  * Property-aware email dispatch service with custom society routing.
+  * Multi-device persistence with SQLite + `localStorage` cache.
+
 ---
 
 ## 5. Backlog & Future Improvement Suggestions
 
-- [ ] **Airbnb iCal Calendar Auto-Sync**: Automatically import new reservations from Airbnb iCal feeds without manual entry.
+- [ ] **Mobile-First UX Overhaul**: Redesign mobile UI layouts to make them more intuitive, simpler, and less overwhelming.
+- [ ] **Airbnb iCal Calendar Auto-Sync**: Automatically import new reservations from Airbnb iCal feeds and auto-bind to listings.
 - [ ] **Gmail Airbnb Confirmation Email Parser**: Automatically parse reservation emails into booking records.
 - [ ] **WhatsApp Business Webhook Integration**: Automatically reply to guest WhatsApp inquiries with their check-in link.
 - [ ] **OCR ID Auto-Extraction**: Read guest name and document type automatically from uploaded Aadhaar/Passport images.
 - [ ] **Post-Checkout ID Auto-Purge Cron**: Scheduled job to automatically delete ID photo files 48 hours after check-out for enhanced data privacy compliance.
-- [ ] **Multi-Property Grouping / Building Selector**: Ability to assign different society security email addresses to different apartment buildings.
 
